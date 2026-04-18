@@ -25,16 +25,15 @@ from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM, BitsAndB
 
 load_dotenv()
 
-SYSTEM_MESSAGE = "You are a helpful Islamic scholar. Answer ONLY based on context."
-#INSTRUCTION_MESSAGE = "Provide a concise answer in 1-3 complete sentences."
-INSTRUCTION_MESSAGE = "Provide a thorough and detailed answer using complete grammatical sentences. Do not end with sentence fragments. If the context is insufficient, clearly say so in a complete sentence."
-
 class RAGPipeLine():
     def __init__(self, device, doc_name, log_fn=None):
         self.config = LLM_Model
         self.device = device
         self.doc_name = doc_name
-        print(self.config)
+
+        self.SYSTEM_MESSAGE = f"Answer ONLY based on context of {self.doc_name}."
+        # INSTRUCTION_MESSAGE = "Provide a concise answer in 1-3 complete sentences."
+        self.INSTRUCTION_MESSAGE = "Provide a thorough and detailed answer using complete grammatical sentences. Do not end with sentence fragments. If the context is insufficient, clearly say so in a complete sentence."
 
         self._load_embeddings()
         self._load_llm()
@@ -183,8 +182,8 @@ class RAGPipeLine():
 
     def token_count(self, user_input):
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful Islamic scholar. Answer ONLY based on context."),
-            ("human", "Context:\n{context}\n\nQuestion: {input}\n\n" + INSTRUCTION_MESSAGE)
+            ("system", self.SYSTEM_MESSAGE),
+            ("human", "Context:\n{context}\n\nQuestion: {input}\n\n" + self.INSTRUCTION_MESSAGE)
         ])
 
         docs = user_input['context']
@@ -193,7 +192,7 @@ class RAGPipeLine():
 
         context_token = self.tokenizer.encode(context_text)
         question_token = self.tokenizer.encode(user_input['input'])
-        instruction_prompt_token = self.tokenizer.encode(INSTRUCTION_MESSAGE)
+        instruction_prompt_token = self.tokenizer.encode(self.INSTRUCTION_MESSAGE)
 
         total_token = len(context_token) + len(question_token) + len(instruction_prompt_token)
         print(f"total_token: {total_token}")
