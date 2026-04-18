@@ -1,3 +1,4 @@
+import sys
 import threading
 import torch
 import tkinter as tk
@@ -73,6 +74,8 @@ def configure_input_window(rag):
 
 
 def main():
+    print(sys.version)
+    print(sys.executable)
     document = "quran-english.pdf"
     rag = RAGPipeLine(select_device(), document.replace(".pdf", ""))
     rag.load_pdf(document)

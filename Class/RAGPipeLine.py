@@ -2,6 +2,7 @@ import atexit
 import multiprocessing
 import re
 
+import torch
 from dotenv import load_dotenv
 import os
 
@@ -12,7 +13,7 @@ from Common.config import LLM_Model
 os.environ['HF_HOME'] = './models'
 #os.environ['CUDA_VISIBLE_DEVICES'] = ''
 cache_dir = os.getenv("HF_HOME")
-HF_KEY = "YOUR_TOKEN"
+HF_KEY = "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"
 os.environ["HF_TOKEN"] = HF_KEY
 
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFacePipeline
@@ -20,7 +21,7 @@ from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
-from transformers import pipeline, AutoTokenizer
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 load_dotenv()
 
@@ -53,32 +54,54 @@ class RAGPipeLine():
 
     def _load_embeddings(self):
         self.log("Loading embedding model: BAAI/bge-large-en-v1.5...")
-        self.embedding = HuggingFaceEmbeddings(model_name=self.config["model_name"],
+        self.embedding = HuggingFaceEmbeddings(model_name=self.config["embedding_model"],
                                                model_kwargs={"device": "cpu"}, multi_process=False,
                                                encode_kwargs={"normalize_embeddings": True})
         self.log("Embedding model ready...")
 
     def _load_llm(self):
-        self.log("Loading embedding model: mistralai/Mistral-7B-Instruct-v0.2...")
+        self.log(f"Loading LLM: {self.config['llm']}...")
 
-        # Load tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.config["llm"],
-            token=os.getenv("HF_TOKEN")
+        self.tokenizer = AutoTokenizer.from_pretrained(self.config["llm"])
+
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True
         )
 
-        # bnb_config = BitsAndBytesConfig(
-        #     load_in_8bit=True,
-        #     bnb_8bit_compute_dtype=torch.float16,
-        #     bnb_8bit_use_double_quant=True,
-        # )
+        model = AutoModelForCausalLM.from_pretrained(
+            self.config["llm"],
+            quantization_config=bnb_config,
+            device_map={"":0}
+        )
 
+        model.generation_config.max_new_tokens = self.config["max_new_tokens"]
+        model.generation_config.do_sample = False
+        model.generation_config.pad_token_id = self.tokenizer.pad_token_id
+        model.generation_config.eos_token_id = self.tokenizer.eos_token_id
+
+        pipe = pipeline(
+            task="text-generation",
+            model=model,
+            tokenizer=self.tokenizer,
+            return_full_text=False
+            )
+
+        #self.llm = HuggingFacePipeline(pipeline=pipe)
+        self.llm = HuggingFacePipeline(pipeline=pipe)
+        self.log("LLM ready...")
+
+        '''
         pipe = pipeline(
             "text-generation",
             model=self.config["llm"],  # ← only this changed
             token=os.getenv("HF_TOKEN"),
             max_new_tokens=self.config["max_new_tokens"],
-            #max_length=self.config["max_length"],
             pad_token_id=2,
             eos_token_id = 2,
             do_sample=False,  # deterministic
@@ -88,9 +111,7 @@ class RAGPipeLine():
             #     "quantization_config": bnb_config
             # }
         )
-
-        self.llm = HuggingFacePipeline(pipeline=pipe)
-        self.log("LLM ready...")
+        '''
 
     def save_vector_store(self, chunks, path):
         vector_store = FAISS.from_documents(documents=chunks, embedding=self.embedding)
@@ -141,8 +162,8 @@ class RAGPipeLine():
             formatted_document.append(content_doc)
 
         # Split and chunk them
-        chunk_size = 512
-        chunk_overlap = 256
+        chunk_size = self.config['chunk_size']
+        chunk_overlap = self.config['chunk_overlap']
         splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size,
                                                   chunk_overlap=chunk_overlap,
                                                   separators=["\n\n", "\n", ".", " "])
@@ -150,7 +171,7 @@ class RAGPipeLine():
         #print(f"Chunk Length: {len(chunks)}")
 
         # Create or load vector store
-        self.vector_stores = self.load_vector_store(chunks, f"faiss_index_{self.doc_name}")
+        self.vector_stores = self.load_vector_store(chunks, f"faiss_index_{self.doc_name}_{self.config['max_new_tokens']}")
         self.log(type(self.vector_stores))
         self.log("Vector store ready...")
 
