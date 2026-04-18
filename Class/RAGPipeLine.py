@@ -13,7 +13,7 @@ from Common.config import LLM_Model
 os.environ['HF_HOME'] = './models'
 #os.environ['CUDA_VISIBLE_DEVICES'] = ''
 cache_dir = os.getenv("HF_HOME")
-HF_KEY = "YOUR API TOKEN HERE"
+HF_KEY = "YOUR_API_TOKEN"
 os.environ["HF_TOKEN"] = HF_KEY
 
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFacePipeline
@@ -53,7 +53,7 @@ class RAGPipeLine():
         print(msg)
 
     def _load_embeddings(self):
-        self.log("Loading embedding model: BAAI/bge-large-en-v1.5...")
+        self.log(f"Loading embedding model: {self.config['embedding_model']}...")
         self.embedding = HuggingFaceEmbeddings(model_name=self.config["embedding_model"],
                                                model_kwargs={"device": "cpu"}, multi_process=False,
                                                encode_kwargs={"normalize_embeddings": True})
@@ -90,6 +90,7 @@ class RAGPipeLine():
             task="text-generation",
             model=model,
             tokenizer=self.tokenizer,
+            max_new_tokens=self.config["max_new_tokens"],
             return_full_text=False
             )
 
@@ -218,7 +219,7 @@ class RAGPipeLine():
         answer = result["answer"].strip().replace("Answer: ", "")
         source_docs = result["source_docs"]
 
-        answer += "\nSources: \n"
+        answer += "\n\n\nSources: \n"
 
         for i, doc in enumerate(source_docs):
             section = doc.metadata.get('section', 'No Section')
