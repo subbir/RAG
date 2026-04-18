@@ -5,4 +5,5 @@ LLM_Model = {
     "top_k": 3,
     "chunk_size": 300,
     "chunk_overlap": 50
+
 }

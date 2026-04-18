@@ -13,7 +13,7 @@ from Common.config import LLM_Model
 os.environ['HF_HOME'] = './models'
 #os.environ['CUDA_VISIBLE_DEVICES'] = ''
 cache_dir = os.getenv("HF_HOME")
-HF_KEY = "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"
+HF_KEY = "YOUR API TOKEN HERE"
 os.environ["HF_TOKEN"] = HF_KEY
 
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFacePipeline
@@ -27,7 +27,7 @@ load_dotenv()
 
 SYSTEM_MESSAGE = "You are a helpful Islamic scholar. Answer ONLY based on context."
 #INSTRUCTION_MESSAGE = "Provide a concise answer in 1-3 complete sentences."
-INSTRUCTION_MESSAGE = "Provide a thorough and detailed answer, covering all relevant aspects based on the context."
+INSTRUCTION_MESSAGE = "Provide a thorough and detailed answer using complete grammatical sentences. Do not end with sentence fragments. If the context is insufficient, clearly say so in a complete sentence."
 
 class RAGPipeLine():
     def __init__(self, device, doc_name, log_fn=None):
@@ -73,6 +73,7 @@ class RAGPipeLine():
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=True
         )
+
 
         model = AutoModelForCausalLM.from_pretrained(
             self.config["llm"],
