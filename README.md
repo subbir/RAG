@@ -92,3 +92,8 @@ deactivate
 faiss-gpu will not install in this setup since I am not using conda. Therefore you gotta install faiss-gpu. This would cost 3-5 mins to create the vector db at the first place. But once it's done, there is no more waiting. So use this command to install faiss-cpu:
 
 pip install faiss-cpu
+
+
+To see the memory usage for cuda or GPU either you can write your own code or you can monitor it in terminal:
+
+watch -n 1 nvidia-smi
