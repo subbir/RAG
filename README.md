@@ -85,3 +85,10 @@ else:
 After you are done, deactivate the venv that you have activated to run this project so that it can start using the system python for the rest of the project in your machine.
 
 deactivate
+
+
+**One more important thing:**
+
+faiss-gpu will not install in this setup since I am not using conda. Therefore you gotta install faiss-gpu. This would cost 3-5 mins to create the vector db at the first place. But once it's done, there is no more waiting. So use this command to install faiss-cpu:
+
+pip install faiss-cpu
